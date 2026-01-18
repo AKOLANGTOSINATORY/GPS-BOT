@@ -21,10 +21,18 @@ if (!cookie) {
    - Key can only be used by ONE placeId
    ===================================================== */
 const VALID_KEYS = new Set([
-  "Admin",
-  // "Key2Here",
-  // "Key3Here",
+  "a7f3c9e1d4b8f0e6c2a9d7b5e4f1c8a0b6d9e2f7c5a3e8d4b1",
+  "c8f2a9e0d7b6e4f5a1c3d9b8e7f0a4c5d6e1b2f9a7d8",
+  "f1e9a4c6d7b5f8a2e0c3d1b9a7e4f6d8c5b2a0e9f1",
+  "b9c2f7a1e8d6f5c4b0a9e7d3f1c8a2b6e4d9f0a5",
+  "e6f0a9b5d7c4f1e8a2d9b6c0f3a7e4d1b8c5f2",
+  "d8f5a7c0e9b6f1a4d2c3e8b9f7a0d6c5e1f4b2",
+  "a2d9f1c5e6b4a7f8c0d3b9e2f5a1e4d7c6b8",
+  "f7b1a6c4e9d0f5b2c8a3e1d7f4a9b6c5e0",
+  "c0e5f9a6d7b1c8e4f2a3d9b5f7c6a0e1b4",
+  "b6f8d2a1c9e0f7a5e4b3c8d6f1a9e7c5b0"
 ]);
+
 
 // In-memory bindings: key -> placeId
 // NOTE: On Render redeploy/restart, bindings reset (fine for basic usage).
