@@ -1,3 +1,5 @@
+// index.js (FULL) — Key system + one-key-per-placeId + your promote/ranker routes
+
 const express = require("express");
 const rbx = require("noblox.js");
 const dotenv = require("dotenv");
@@ -12,6 +14,69 @@ if (!cookie) {
   process.exit(1);
 }
 
+/* =====================================================
+   LICENSE SYSTEM (VALID KEYS STORED HERE)
+   - Empty key => invalid
+   - Key must exist in VALID_KEYS
+   - Key can only be used by ONE placeId
+   ===================================================== */
+const VALID_KEYS = new Set([
+  "Admin",
+  // "Key2Here",
+  // "Key3Here",
+]);
+
+// In-memory bindings: key -> placeId
+// NOTE: On Render redeploy/restart, bindings reset (fine for basic usage).
+const KEY_BINDINGS = new Map();
+
+function validateKeyForPlace(key, placeId) {
+  // placeId required
+  if (!placeId || Number.isNaN(placeId)) {
+    return { ok: false, reason: "MISSING_PLACEID" };
+  }
+
+  // key required + non-empty
+  if (typeof key !== "string" || key.trim() === "") {
+    return { ok: false, reason: "EMPTY_KEY" };
+  }
+
+  // key must be valid
+  if (!VALID_KEYS.has(key)) {
+    return { ok: false, reason: "INVALID_KEY" };
+  }
+
+  // one-key-per-place binding
+  const bound = KEY_BINDINGS.get(key);
+  if (!bound) {
+    KEY_BINDINGS.set(key, placeId);
+    console.log(`🔐 Key "${key}" bound to PlaceId ${placeId}`);
+    return { ok: true };
+  }
+
+  if (bound !== placeId) {
+    return { ok: false, reason: "KEY_ALREADY_USED" };
+  }
+
+  return { ok: true };
+}
+
+function requireLicense(req, res) {
+  const key = String(req.query.key ?? "");
+  const placeId = Number(req.query.placeid);
+
+  const result = validateKeyForPlace(key, placeId);
+  if (!result.ok) {
+    res.status(result.reason === "MISSING_PLACEID" ? 400 : 403).json({
+      ok: false,
+      error: result.reason,
+    });
+    return null;
+  }
+
+  return { key, placeId };
+}
+
 rbx.setCookie(cookie)
   .then(() => {
     console.log("✅ Logged in to Roblox");
@@ -20,8 +85,26 @@ rbx.setCookie(cookie)
       res.send("Roblox Ranker is alive!");
     });
 
-    // Manual rank set route (optional)
+    // ✅ Roblox calls this once when the server boots
+    app.get("/validate", (req, res) => {
+      const key = String(req.query.key ?? "");
+      const placeId = Number(req.query.placeid);
+
+      const result = validateKeyForPlace(key, placeId);
+      if (!result.ok) {
+        return res.status(result.reason === "MISSING_PLACEID" ? 400 : 403).json({
+          ok: false,
+          error: result.reason,
+        });
+      }
+
+      return res.json({ ok: true });
+    });
+
+    // Manual rank set route (optional) - now protected by key+placeid
     app.get("/ranker", async (req, res) => {
+      if (!requireLicense(req, res)) return;
+
       const userId = parseInt(req.query.userid);
       const rank = parseInt(req.query.rank);
       const groupId = parseInt(req.query.groupid);
@@ -39,8 +122,10 @@ rbx.setCookie(cookie)
       }
     });
 
-    // Updated promote route
+    // Promote route - now protected by key+placeid
     app.get("/promote", async (req, res) => {
+      if (!requireLicense(req, res)) return;
+
       const userId = parseInt(req.query.userid);
       const groupId = parseInt(req.query.groupid);
 
