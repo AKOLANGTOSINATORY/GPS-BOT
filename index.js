@@ -150,6 +150,25 @@ rbx.setCookie(cookie)
       }
     });
 
+    // 🔓 GAMEPASS RANK BOT (NO LICENSE)
+app.get("/ranker-gamepass", async (req, res) => {
+  const userId = parseInt(req.query.userid);
+  const rank = parseInt(req.query.rank);
+  const groupId = parseInt(req.query.groupid);
+
+  if (!userId || !rank || !groupId) {
+    return res.status(400).json({ error: "Missing userid, rank, or groupid" });
+  }
+
+  try {
+    await rbx.setRank(groupId, userId, rank);
+    res.json({ success: true, message: "Ranked via gamepass system" });
+  } catch (err) {
+    console.error("❌ Gamepass rank failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
