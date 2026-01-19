@@ -21,17 +21,18 @@ if (!cookie) {
    - Key can only be used by ONE placeId
    ===================================================== */
 const VALID_KEYS = new Set([
-  "a7f3c9e1d4b8f0e6c2a9d7b5e4f1c8a0b6d9e2f7c5a3e8d4b1",
-  "c8f2a9e0d7b6e4f5a1c3d9b8e7f0a4c5d6e1b2f9a7d8",
-  "f1e9a4c6d7b5f8a2e0c3d1b9a7e4f6d8c5b2a0e9f1",
-  "b9c2f7a1e8d6f5c4b0a9e7d3f1c8a2b6e4d9f0a5",
-  "e6f0a9b5d7c4f1e8a2d9b6c0f3a7e4d1b8c5f2",
-  "d8f5a7c0e9b6f1a4d2c3e8b9f7a0d6c5e1f4b2",
-  "a2d9f1c5e6b4a7f8c0d3b9e2f5a1e4d7c6b8",
-  "f7b1a6c4e9d0f5b2c8a3e1d7f4a9b6c5e0",
-  "c0e5f9a6d7b1c8e4f2a3d9b5f7c6a0e1b4",
-  "b6f8d2a1c9e0f7a5e4b3c8d6f1a9e7c5b0",
+  "9e2c7b4f1a6d0e8f5c3b9a4d7e1f2c8b6a5",
+  "f3a9e1c6d7b0f5e8a2c4b9d1e6f7a3c8b5",
+  "6f1e9b3a7d5c8e0f4a2b6d9c1e7f5a8b3",
+  "c7b1a9f6e4d8c5f0a2b3e7d1f9a6c8e4",
+  "8a5e2d9c1f6b4a7e0f3c8d5b9f1a6e4c2",
+  "e4b9f0a7c6d1e8f5a3b2c9d4f7a1e6c8",
+  "5c8e1f4a9d6b0c2e7f3a5b8d1c9f6e4",
+  "a0f6c9e2b5d8a1f7c4e3b9d6f5a8c2",
+  "d9c2f6e1a8b7d4f0c5e9a3b6c8f1e7",
+  "1f8c6b9e4a0d5f7c2e3b1a9d6f8c4e"
 ]);
+
 
 // In-memory bindings: key -> placeId
 // NOTE: On Render redeploy/restart, bindings reset (fine for basic usage).
