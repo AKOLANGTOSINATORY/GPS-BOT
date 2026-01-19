@@ -1,4 +1,5 @@
-// index.js (FULL) — Key system + one-key-per-placeId + your promote/ranker routes
+// index.js (FULL) — Key system + one-key-per-placeId + preserve promote/ranker routes
+// + Added: /ranker_gp (NO key/placeid) for Gamepass Rankbot, protected by GP_SECRET
 
 const express = require("express");
 const rbx = require("noblox.js");
@@ -32,7 +33,6 @@ const VALID_KEYS = new Set([
   "c0e5f9a6d7b1c8e4f2a3d9b5f7c6a0e1b4",
   "b6f8d2a1c9e0f7a5e4b3c8d6f1a9e7c5b0"
 ]);
-
 
 // In-memory bindings: key -> placeId
 // NOTE: On Render redeploy/restart, bindings reset (fine for basic usage).
@@ -85,6 +85,29 @@ function requireLicense(req, res) {
   return { key, placeId };
 }
 
+/* =====================================================
+   GAMEPASS RANKBOT PROTECTION (NO key/placeid)
+   - You MUST set GP_SECRET in Render Environment Variables
+   - Roblox ServerScript calls /ranker_gp?secret=...&userid=...&rank=...&groupid=...
+   ===================================================== */
+function requireGamepassSecret(req, res) {
+  const expected = String(process.env.GP_SECRET ?? "");
+  const secret = String(req.query.secret ?? "");
+
+  if (!expected || expected.trim() === "") {
+    // safer: if you forgot to set GP_SECRET, block the route completely
+    res.status(500).json({ error: "GP_SECRET_NOT_SET" });
+    return false;
+  }
+
+  if (secret !== expected) {
+    res.status(403).json({ error: "FORBIDDEN" });
+    return false;
+  }
+
+  return true;
+}
+
 rbx.setCookie(cookie)
   .then(() => {
     console.log("✅ Logged in to Roblox");
@@ -109,7 +132,29 @@ rbx.setCookie(cookie)
       return res.json({ ok: true });
     });
 
-    // Manual rank set route (optional) - now protected by key+placeid
+    // ✅ Gamepass Rankbot route (NO license) but protected by GP_SECRET
+    // This preserves your existing /ranker + /promote structure untouched.
+    app.get("/ranker_gp", async (req, res) => {
+      if (!requireGamepassSecret(req, res)) return;
+
+      const userId = parseInt(req.query.userid);
+      const rank = parseInt(req.query.rank);
+      const groupId = parseInt(req.query.groupid);
+
+      if (!userId || !rank || !groupId) {
+        return res.status(400).json({ error: "Missing userid, rank, or groupid" });
+      }
+
+      try {
+        await rbx.setRank(groupId, userId, rank);
+        res.json({ success: true, message: `Ranked user ${userId} in group ${groupId}` });
+      } catch (err) {
+        console.error("❌ Failed to rank (ranker_gp):", err);
+        res.status(500).json({ error: err.message });
+      }
+    });
+
+    // Manual rank set route (optional) - protected by key+placeid
     app.get("/ranker", async (req, res) => {
       if (!requireLicense(req, res)) return;
 
@@ -130,7 +175,7 @@ rbx.setCookie(cookie)
       }
     });
 
-    // Promote route - now protected by key+placeid
+    // Promote route - protected by key+placeid
     app.get("/promote", async (req, res) => {
       if (!requireLicense(req, res)) return;
 
