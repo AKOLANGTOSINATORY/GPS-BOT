@@ -1,4 +1,4 @@
-// index.js (FULL) — Key system + one-key-per-placeId + your promote/ranker routes
+// index.js (FULL FINAL) — License keys (one-key-per-placeId) + ranker/promote + ranker-gamepass (no license)
 
 const express = require("express");
 const rbx = require("noblox.js");
@@ -7,10 +7,10 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
-const cookie = process.env.COOKIE; // keep cookie in Render env (safe!)
+const cookie = process.env.COOKIE; // keep cookie in Render env (safe)
 
 if (!cookie) {
-  console.error("❌ Missing COOKIE in .env file");
+  console.error("❌ Missing COOKIE in environment variables");
   process.exit(1);
 }
 
@@ -30,17 +30,16 @@ const VALID_KEYS = new Set([
   "a2d9f1c5e6b4a7f8c0d3b9e2f5a1e4d7c6b8",
   "f7b1a6c4e9d0f5b2c8a3e1d7f4a9b6c5e0",
   "c0e5f9a6d7b1c8e4f2a3d9b5f7c6a0e1b4",
-  "b6f8d2a1c9e0f7a5e4b3c8d6f1a9e7c5b0"
+  "b6f8d2a1c9e0f7a5e4b3c8d6f1a9e7c5b0",
 ]);
-
 
 // In-memory bindings: key -> placeId
 // NOTE: On Render redeploy/restart, bindings reset (fine for basic usage).
 const KEY_BINDINGS = new Map();
 
 function validateKeyForPlace(key, placeId) {
-  // placeId required
-  if (!placeId || Number.isNaN(placeId)) {
+  // placeId required (must be a positive finite number)
+  if (!Number.isFinite(placeId) || placeId <= 0) {
     return { ok: false, reason: "MISSING_PLACEID" };
   }
 
@@ -56,12 +55,15 @@ function validateKeyForPlace(key, placeId) {
 
   // one-key-per-place binding
   const bound = KEY_BINDINGS.get(key);
+
+  // If not bound yet, bind now
   if (!bound) {
     KEY_BINDINGS.set(key, placeId);
-    console.log(`🔐 Key "${key}" bound to PlaceId ${placeId}`);
+    console.log(`🔐 Key bound to PlaceId ${placeId}`);
     return { ok: true };
   }
 
+  // If bound to different placeId, refuse
   if (bound !== placeId) {
     return { ok: false, reason: "KEY_ALREADY_USED" };
   }
@@ -85,7 +87,8 @@ function requireLicense(req, res) {
   return { key, placeId };
 }
 
-rbx.setCookie(cookie)
+rbx
+  .setCookie(cookie)
   .then(() => {
     console.log("✅ Logged in to Roblox");
 
@@ -93,7 +96,7 @@ rbx.setCookie(cookie)
       res.send("Roblox Ranker is alive!");
     });
 
-    // ✅ Roblox calls this once when the server boots
+    // ✅ Roblox calls this once when the server boots (license system)
     app.get("/validate", (req, res) => {
       const key = String(req.query.key ?? "");
       const placeId = Number(req.query.placeid);
@@ -109,16 +112,16 @@ rbx.setCookie(cookie)
       return res.json({ ok: true });
     });
 
-    // Manual rank set route (optional) - now protected by key+placeid
+    // Manual rank set route (LICENSE PROTECTED)
     app.get("/ranker", async (req, res) => {
       if (!requireLicense(req, res)) return;
 
-      const userId = parseInt(req.query.userid);
-      const rank = parseInt(req.query.rank);
-      const groupId = parseInt(req.query.groupid);
+      const userId = parseInt(req.query.userid, 10);
+      const rank = parseInt(req.query.rank, 10);
+      const groupId = parseInt(req.query.groupid, 10);
 
-      if (!userId || !rank || !groupId) {
-        return res.status(400).json({ error: "Missing userid, rank, or groupid" });
+      if (!Number.isFinite(userId) || !Number.isFinite(rank) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ error: "Missing or invalid userid, rank, or groupid" });
       }
 
       try {
@@ -130,15 +133,15 @@ rbx.setCookie(cookie)
       }
     });
 
-    // Promote route - now protected by key+placeid
+    // Promote route (LICENSE PROTECTED)
     app.get("/promote", async (req, res) => {
       if (!requireLicense(req, res)) return;
 
-      const userId = parseInt(req.query.userid);
-      const groupId = parseInt(req.query.groupid);
+      const userId = parseInt(req.query.userid, 10);
+      const groupId = parseInt(req.query.groupid, 10);
 
-      if (!userId || !groupId) {
-        return res.status(400).json({ error: "Missing userid or groupid" });
+      if (!Number.isFinite(userId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ error: "Missing or invalid userid or groupid" });
       }
 
       try {
@@ -151,23 +154,23 @@ rbx.setCookie(cookie)
     });
 
     // 🔓 GAMEPASS RANK BOT (NO LICENSE)
-app.get("/ranker-gamepass", async (req, res) => {
-  const userId = parseInt(req.query.userid);
-  const rank = parseInt(req.query.rank);
-  const groupId = parseInt(req.query.groupid);
+    app.get("/ranker-gamepass", async (req, res) => {
+      const userId = parseInt(req.query.userid, 10);
+      const rank = parseInt(req.query.rank, 10);
+      const groupId = parseInt(req.query.groupid, 10);
 
-  if (!userId || !rank || !groupId) {
-    return res.status(400).json({ error: "Missing userid, rank, or groupid" });
-  }
+      if (!Number.isFinite(userId) || !Number.isFinite(rank) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ error: "Missing or invalid userid, rank, or groupid" });
+      }
 
-  try {
-    await rbx.setRank(groupId, userId, rank);
-    res.json({ success: true, message: "Ranked via gamepass system" });
-  } catch (err) {
-    console.error("❌ Gamepass rank failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
+      try {
+        await rbx.setRank(groupId, userId, rank);
+        res.json({ success: true, message: "Ranked via gamepass system" });
+      } catch (err) {
+        console.error("❌ Gamepass rank failed:", err);
+        res.status(500).json({ error: err.message });
+      }
+    });
 
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
@@ -177,4 +180,3 @@ app.get("/ranker-gamepass", async (req, res) => {
   .catch((err) => {
     console.error("❌ Failed to log in with cookie:", err);
   });
-
